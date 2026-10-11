@@ -18,7 +18,7 @@ class Panel(BaseModel):
 
 class Decision(BaseModel):
     decision_id: str
-    description: str  # "Price +6% on 4 North regions"
+    description: str  # "Price +6% on 4 Daybreak metro markets"
     treated_units: list[str]
     start_period: int
     outcome: str

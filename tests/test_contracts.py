@@ -4,7 +4,7 @@ from decision_proof.contracts import Decision, EffectEstimate
 def test_contracts_roundtrip():
     d = Decision(
         decision_id="d1",
-        description="Price +6% on 4 North regions",
+        description="Price +6% on 4 Daybreak metro markets",
         treated_units=["r1", "r2", "r3", "r4"],
         start_period=61,
         outcome="revenue",
