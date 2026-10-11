@@ -21,7 +21,7 @@ def test_summarize_one_row_per_scenario_method():
     raw = run_calibration(scenarios=["S1", "S3"], methods=list(ESTIMATORS), n=2, n_jobs=1)
     summary = summarize(raw)
 
-    assert len(summary) == 4  # 2 scenarios x 2 methods
+    assert len(summary) == 2 * len(ESTIMATORS)  # 2 scenarios x all registered methods
     assert (summary["n"] == 2).all()
     assert (summary["coverage_90"].between(0, 1)).all()
     assert (summary["significant_rate"].between(0, 1)).all()

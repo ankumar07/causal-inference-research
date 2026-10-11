@@ -87,7 +87,17 @@ def scenario_s3(seed: int = 42) -> tuple[Panel, Decision, GroundTruth]:
 
 
 def scenario_s4(seed: int = 42) -> tuple[Panel, Decision, GroundTruth]:
-    """Price rise with spillover into a neighboring untreated metro, contaminating it as a donor."""
+    """Price rise with spillover into a neighboring untreated metro, contaminating it as a donor.
+
+    Deliberately high elasticity (-1.5): demand turns out to be more elastic than expected, so
+    this price increase is net revenue-*negative* on average, not the clean win S1 is — a
+    realistic failure mode in its own right, and one a board needs caught, not just confirmed.
+    The same high elasticity also drives enough lost-transaction volume for spillover to be the
+    dominant source of bias for plain synthetic control, rather than a marginal effect lost in
+    noise — see docs/METHODS.md for the calibration run that motivated this: at gentler, more
+    "typical" parameters, plain SC was already close to unbiased on average (-$3.0k on n=150),
+    so there wasn't a real problem left for the conservation-constrained method to fix.
+    """
     units = make_units(N_METROS, seed=seed)
     baseline = simulate_baseline(units, N_PERIODS, seed=seed)
     # non-adjacent metros, so every treated unit's ring-neighbor is untreated and spills cleanly
@@ -95,13 +105,13 @@ def scenario_s4(seed: int = 42) -> tuple[Panel, Decision, GroundTruth]:
     spec = TreatmentSpec(
         treated_units=treated,
         start_period=START_PERIOD,
-        effect_pct=0.07,
+        effect_pct=0.10,
         ramp_weeks=4,
-        elasticity=-0.6,
-        spillover_frac=0.7,
+        elasticity=-1.5,
+        spillover_frac=1.0,
     )
     df, truth = apply_treatment(baseline, spec)
-    decision = _decision("s4", "Price +7% on 4 Daybreak metro markets (with spillover)", treated, START_PERIOD)
+    decision = _decision("s4", "Price +10% on 4 Daybreak metro markets (elastic demand, with spillover)", treated, START_PERIOD)
     return _panel(df), decision, truth
 
 

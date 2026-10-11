@@ -2,9 +2,10 @@ import pytest
 
 from decision_proof.estimators.did import DiDEventStudy
 from decision_proof.estimators.synth import SyntheticControl
+from decision_proof.estimators.synth_conservation import ConservationConstrainedSyntheticControl
 from decision_proof.simulate.scenarios import generate_scenario
 
-ESTIMATORS = [DiDEventStudy(), SyntheticControl()]
+ESTIMATORS = [DiDEventStudy(), SyntheticControl(), ConservationConstrainedSyntheticControl()]
 
 
 def _assert_valid_estimate(est, panel, decision):

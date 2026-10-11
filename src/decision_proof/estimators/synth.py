@@ -12,7 +12,8 @@ effect.
 from __future__ import annotations
 
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Callable
 
 import cvxpy as cp
 import numpy as np
@@ -105,13 +106,20 @@ class SyntheticControl:
     n_resamples: int = 2000
     seed: int = 1
     alpha: float = 0.10
+    # Given the unit(s) being fit (the real treated units, or a single placebo unit playing
+    # that role), returns donor ids to exclude from the pool. None = exclude nothing (plain
+    # SC). Subclassed by ConservationConstrainedSyntheticControl to exclude known-adjacent
+    # donors that could be contaminated by spillover from the unit(s) being fit.
+    exclude_fn: Callable[[list[str]], set[str]] | None = field(default=None, repr=False, compare=False)
 
     def fit(self, panel: Panel, decision: Decision) -> EffectEstimate:
         outcome = panel.outcome
         df = panel.df
         start = decision.start_period
         treated_units = list(decision.treated_units)
-        donor_pool = [u for u in df["unit_id"].unique() if u not in treated_units]
+        base_pool = [u for u in df["unit_id"].unique() if u not in treated_units]
+        excluded_for_treated = self.exclude_fn(treated_units) if self.exclude_fn else set()
+        donor_pool = [u for u in base_pool if u not in excluded_for_treated]
 
         wide = _pivot(df, outcome)
         periods = wide.index.to_numpy()
@@ -132,11 +140,16 @@ class SyntheticControl:
             pre_fit_quality[unit] = float(pre_rmspe / wide[unit].to_numpy()[pre_mask].mean())
             real_ratios[unit] = _rmspe_ratio(effect, pre_mask, post_mask)
 
-        # --- placebo-in-space: every donor, treated as a fake-treated unit against the rest ---
+        # --- placebo-in-space: every donor, treated as a fake-treated unit against the rest.
+        # Candidates are the full base pool (not the treated units' reduced donor_pool) — each
+        # placebo unit gets its own exclusion applied symmetrically to how a real treated unit
+        # would be fit, so the inference stays apples-to-apples. ---
         placebo_effects = {}
         placebo_ratios = {}
-        for unit in donor_pool:
-            sub_donors = [d for d in donor_pool if d != unit]
+        for unit in base_pool:
+            sub_donors = [d for d in base_pool if d != unit]
+            excluded_for_unit = self.exclude_fn([unit]) if self.exclude_fn else set()
+            sub_donors = [d for d in sub_donors if d not in excluded_for_unit]
             effect, _ = _unit_effect(wide, unit, sub_donors, pre_mask)
             placebo_effects[unit] = effect
             placebo_ratios[unit] = _rmspe_ratio(effect, pre_mask, post_mask)
@@ -168,14 +181,14 @@ class SyntheticControl:
 
         # --- permutation-style 90% interval from the placebo units' noise ---
         rng = np.random.default_rng(self.seed)
-        placebo_cum = np.array([placebo_effects[u][post_mask].sum() for u in donor_pool])
+        placebo_cum = np.array([placebo_effects[u][post_mask].sum() for u in base_pool])
         draws = rng.choice(placebo_cum, size=(self.n_resamples, len(treated_units)), replace=True).sum(axis=1)
         lo_q, hi_q = np.quantile(draws, [self.alpha / 2, 1 - self.alpha / 2])
         cum_lo, cum_hi = cum_effect + lo_q, cum_effect + hi_q
         pct_lo = cum_lo / denom * 100 if denom else 0.0
         pct_hi = cum_hi / denom * 100 if denom else 0.0
 
-        placebo_by_h = np.array([placebo_effects[u][post_mask] for u in donor_pool])  # n_donors x n_post
+        placebo_by_h = np.array([placebo_effects[u][post_mask] for u in base_pool])  # n_candidates x n_post
         path = []
         for i, p in enumerate(post_periods):
             point = float(agg_effect[post_mask][i])
@@ -214,5 +227,6 @@ class SyntheticControl:
                 "placebo_pvalues": placebo_pvalues,
                 "placebo_pvalue_combined": combined_pvalue,
                 "n_donors": len(donor_pool),
+                "n_excluded_from_treated_pool": len(excluded_for_treated),
             },
         )

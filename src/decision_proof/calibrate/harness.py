@@ -15,11 +15,13 @@ from joblib import Parallel, delayed
 
 from decision_proof.estimators.did import DiDEventStudy
 from decision_proof.estimators.synth import SyntheticControl
+from decision_proof.estimators.synth_conservation import ConservationConstrainedSyntheticControl
 from decision_proof.simulate.scenarios import SCENARIOS, generate_scenario
 
 ESTIMATORS = {
     "did_event_study": DiDEventStudy,
     "synthetic_control": SyntheticControl,
+    "conservation_constrained_sc": ConservationConstrainedSyntheticControl,
 }
 
 

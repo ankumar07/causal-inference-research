@@ -17,7 +17,7 @@ SCENARIO_NOTES = {
     "S1": "Price +6%, 60 weeks of history. The clean case.",
     "S2": "Same decision, 12 weeks of history. Short-history degradation.",
     "S3": "No true effect, timed to a seasonal spike. True effect is 0 — `significant_rate` here *is* the false-positive rate.",
-    "S4": "Price +7% with spillover into a neighboring donor. Naive synthetic control is expected to be biased here.",
+    "S4": "Price +10%, elastic demand (net revenue-negative), with spillover into a neighboring donor. Naive synthetic control is expected to be biased here.",
     "S5": "Staggered rollout across 6 metros over 8 weeks.",
 }
 

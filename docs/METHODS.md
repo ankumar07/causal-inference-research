@@ -46,3 +46,58 @@ Candidate real fixes (not yet done): cap the donor pool size relative to the
 pre-period length for short-history decisions, or revisit this during B4's
 calibration pass, where coverage and false-positive rate get checked by simulation
 rather than by eyeballing one seed.
+
+## Conservation-constrained synthetic control (B5)
+
+**The mechanism it targets.** In the simulator, spillover only shows up *after* a
+decision starts — lost transactions at a treated metro are zero before treatment, so
+a donor's pre-period values are never contaminated. Plain synthetic control fits
+weights on clean pre-period data, so the fitting step itself isn't biased. The bias
+comes from what happens next: if a donor that goes on to absorb redirected demand was
+given nonzero weight, the *synthetic counterfactual* inflates right when the real
+effect is supposed to show up, shrinking (treated − synthetic) and understating the
+effect. Demand within a shared market is roughly conserved — a price rise shifts
+transactions to the nearest shop-cluster rather than destroying them — so a
+demand-conserving neighbor's post-period values can't be trusted as independent,
+untreated signal.
+
+**First attempt (rejected): exclude known-adjacent donors from the pool entirely.**
+Tested via the calibration lab on S4 at its original, gentler parameters
+(effect +7%, elasticity −0.6, spillover 0.7; n=150): plain SC bias was already
+−$3.0k (essentially unbiased), and exclusion made it *worse*: +$31.2k. Losing 4 of
+20 donors costs more in donor-pool diversity than it saves in avoided contamination,
+especially when the contamination at hand is modest.
+
+**Second attempt (kept): decontaminate instead of excluding.** Keep the neighbor in
+the pool — its pre-period values are clean — but before using it to build the
+treated unit's synthetic counterfactual, replace its *post*-period values with its
+own synthetic control estimate, fit from a donor pool that excludes both the treated
+units and the neighbor itself. This preserves the neighbor's genuine pre-period fit
+information and only launders the specific values conservation theory says can't be
+trusted. Implemented as a panel transform (`synth_conservation.decontaminate_panel`)
+feeding into the ordinary `SyntheticControl.fit()` — which means placebo-in-space is
+computed on the same decontaminated data too, for free.
+
+**Why S4's parameters were recalibrated.** At the original gentler parameters, there
+wasn't enough contamination for the fix to have anything meaningful to correct — and
+the decontamination step has its own cost: replacing a donor's values with a model
+estimate introduces that estimate's own error, which (per-seed) is roughly a
+*fixed, scenario-independent* noise term — it depends on the random donor data, not
+on the true effect size. So decontamination is a net win only once the contamination
+it's correcting for is large relative to that fixed cost, and a net loss otherwise.
+S4 was recalibrated (effect +10%, elasticity −1.5, spillover 1.0) specifically to be
+a regime where contamination dominates — which also means demand turns out more
+elastic than expected and the decision is net revenue-*negative* on average, not a
+clean win like S1. That's an intentional, realistic complication, not a mistake: a
+board needs a system that catches a backfiring price increase, not just one that
+confirms decisions that worked.
+
+**Result** (N=200, seeds 4000-4199): plain SC mean absolute error $150.2k vs
+conservation-constrained $118.5k — a ~21% reduction. Plain SC's bias is strongly
+negative (−$116.0k, consistent with the "contaminated donor inflates the synthetic,
+shrinking the estimated effect" mechanism); the conservation-constrained method's
+bias is smaller in magnitude but overshoots in the other direction (+$16.3k) rather
+than landing at zero — it trades one bias for a smaller one, not a clean fix. Interval
+coverage also drops (88.5% → 72.5%): the decontamination step adds its own estimation
+uncertainty that the current permutation interval doesn't fully account for, worth
+revisiting if this becomes a formally reported production interval rather than a demo.
