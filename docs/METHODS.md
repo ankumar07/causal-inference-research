@@ -132,3 +132,19 @@ bias is real and worth having built, even though this particular 6-unit demo is 
 stage for it to pay off. Candidate follow-up, not yet done: more treated units per cohort
 (so cohort-level averaging reduces the bootstrap's variance) would be the natural next thing
 to try before concluding the method itself doesn't work, rather than just this demo's scale.
+
+## Instrumental variables (Q7): a weak-instrument near-miss, caught before shipping
+
+First calibration of `simulate.iv.generate_iv_data` used `INSTRUMENT_STRENGTH = 0.40` against
+a confounding term on price with an implied standard deviation of ~15 — the instrument's
+contribution to price's variance was swamped roughly 20-to-1 by the confound. First-stage
+F-statistic: **1.3**, far under the Staiger-Stock rule-of-thumb threshold of 10. The 2SLS
+estimate still happened to contain the true effect at that calibration, but only because its
+confidence interval was so wide from the weak first stage that it would have covered almost
+anything — a fragile, not-reproducible "win," not a real one. Recalibrated
+(`INSTRUMENT_STRENGTH = 3.0`, confound-on-price reduced, n=500): first-stage F-stat ~826.
+Across 60 seeds at the recalibrated settings: naive OLS covers the true effect **0%** of the
+time (confidently wrong, not just noisy — mean bias +$528), 2SLS covers it **90%** of the
+time, matching the target, with mean bias of only -$12. Caught via the same discipline this
+whole suite is built around — compute the diagnostic (first-stage F) before trusting the
+headline number, not after.
