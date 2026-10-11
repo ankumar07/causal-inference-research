@@ -115,12 +115,17 @@ def scenario_s4(seed: int = 42) -> tuple[Panel, Decision, GroundTruth]:
     return _panel(df), decision, truth
 
 
+def _s5_treated_and_starts() -> tuple[list[str], dict[str, int]]:
+    treated = [metro_id(i) for i in range(16, 22)]
+    starts = {u: START_PERIOD + i * (8 // (len(treated) - 1)) for i, u in enumerate(treated)}
+    return treated, starts
+
+
 def scenario_s5(seed: int = 42) -> tuple[Panel, Decision, GroundTruth]:
     """Stretch: a staggered rollout across 6 metros over 8 weeks."""
     units = make_units(N_METROS, seed=seed)
     baseline = simulate_baseline(units, N_PERIODS, seed=seed)
-    treated = [metro_id(i) for i in range(16, 22)]
-    starts = {u: START_PERIOD + i * (8 // (len(treated) - 1)) for i, u in enumerate(treated)}
+    treated, starts = _s5_treated_and_starts()
     spec = TreatmentSpec(
         treated_units=treated,
         start_period=starts,
@@ -133,6 +138,48 @@ def scenario_s5(seed: int = 42) -> tuple[Panel, Decision, GroundTruth]:
         "s5", "Price +6% staggered across 6 Daybreak metro markets over 8 weeks", treated, min(starts.values())
     )
     return _panel(df), decision, truth
+
+
+def scenario_s5_with_starts(seed: int = 42) -> tuple[Panel, Decision, GroundTruth, dict[str, int]]:
+    """Same as scenario_s5, but also returns each treated unit's own start period -
+    needed by the staggered-adoption-robust estimator, which (unlike the other
+    estimators) can't work off Decision's single start_period."""
+    panel, decision, truth = scenario_s5(seed=seed)
+    _, starts = _s5_treated_and_starts()
+    return panel, decision, truth, starts
+
+
+def scenario_s5_heterogeneous(seed: int = 42) -> tuple[Panel, Decision, GroundTruth, dict[str, int]]:
+    """Same staggered rollout as S5, but each wave's effect size grows with the
+    rollout - a realistic story (execution improved as the team learned from each
+    earlier wave) and, not incidentally, exactly the kind of cross-cohort effect
+    heterogeneity that naive two-way-fixed-effects DiD is biased under. With a
+    *homogeneous* effect (plain scenario_s5), naive TWFE is actually fine - the
+    bias mechanism specifically needs effects that vary by cohort. Kept separate
+    from scenario_s5/scenario_s5_with_starts so the original S1-S5 demo set and
+    its already-committed B4/B5 calibration numbers are untouched.
+    """
+    units = make_units(N_METROS, seed=seed)
+    baseline = simulate_baseline(units, N_PERIODS, seed=seed)
+    treated, starts = _s5_treated_and_starts()
+    # earliest-treated wave gets ~0x the base effect, latest gets ~2.2x
+    heterogeneity = {u: 0.1 + 2.1 * i / (len(treated) - 1) for i, u in enumerate(treated)}
+    spec = TreatmentSpec(
+        treated_units=treated,
+        start_period=starts,
+        effect_pct=0.10,
+        ramp_weeks=4,
+        elasticity=-0.3,
+        heterogeneity=heterogeneity,
+    )
+    df, truth = apply_treatment(baseline, spec)
+    decision = _decision(
+        "s5-heterogeneous",
+        "Price +6% staggered across 6 Daybreak metro markets, effect growing wave over wave",
+        treated,
+        min(starts.values()),
+    )
+    return _panel(df), decision, truth, starts
 
 
 SCENARIOS = {

@@ -101,3 +101,34 @@ than landing at zero — it trades one bias for a smaller one, not a clean fix. 
 coverage also drops (88.5% → 72.5%): the decontamination step adds its own estimation
 uncertainty that the current permutation interval doesn't fully account for, worth
 revisiting if this becomes a formally reported production interval rather than a demo.
+
+## Staggered-adoption DiD (Q5): a correction that didn't beat the thing it corrects
+
+Built a simplified Callaway & Sant'Anna (2021)-style estimator (`estimators/staggered_did.py`)
+to fix a real, textbook problem: naive two-way-fixed-effects DiD (`estimators/did.py`) is
+biased under staggered treatment timing when the effect size varies by cohort, because it
+implicitly uses already-treated units as part of the comparison for later-treated ones.
+
+`simulate.scenarios.scenario_s5` (the original staggered scenario) has a *homogeneous*
+effect across all 6 waves, which gives naive TWFE nothing to be biased by — confirmed that
+comparison is a wash by construction. Added `scenario_s5_heterogeneous`, where effect size
+grows ~0x to ~2.2x across the waves, to actually introduce the bias mechanism.
+
+Result, on the most reliable read available (120 seeds, parallelized): naive TWFE's mean
+absolute bias ($145.3k) is *better* than the staggered estimator's ($154.8k) — the fix
+didn't pay off here. Two smaller, earlier samples (40 and 60 seeds) had each told a
+different, more flattering story in both directions before the larger run settled it — a
+reminder that n=30-60 isn't enough to trust a comparison like this one way or the other, and
+a caution against reporting an early favorable-looking sample as the result.
+
+Best current read on why: with only 6 treated units (each its own cohort of one), the
+estimator's percentile bootstrap over the control pool carries enough of its own variance
+to swamp whatever systematic TWFE bias the heterogeneous effects introduce at this scale —
+the same bias-variance tradeoff B5's first (rejected) attempt ran into, except here it shows
+up in the kept design, not a discarded one. Left in the codebase as a correctly-implemented,
+honestly-evaluated estimator rather than pulled or re-tuned to win the comparison it didn't
+win (per `CLAUDE.md`: "never tune to look good") — the textbook fix for staggered-adoption
+bias is real and worth having built, even though this particular 6-unit demo is too small a
+stage for it to pay off. Candidate follow-up, not yet done: more treated units per cohort
+(so cohort-level averaging reduces the bootstrap's variance) would be the natural next thing
+to try before concluding the method itself doesn't work, rather than just this demo's scale.
