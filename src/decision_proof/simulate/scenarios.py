@@ -72,7 +72,7 @@ def scenario_s3(seed: int = 42) -> tuple[Panel, Decision, GroundTruth]:
     units = make_units(N_METROS, seed=seed)
     baseline = simulate_baseline(units, N_PERIODS, seed=seed)
     treated = [metro_id(i) for i in range(4, 8)]
-    start = nearest_seasonal_peak(units[4], near_period=START_PERIOD)
+    start = nearest_seasonal_peak(units[4], near_period=START_PERIOD, min_period=16, max_period=N_PERIODS - 15)
     spec = TreatmentSpec(
         treated_units=treated,
         start_period=start,

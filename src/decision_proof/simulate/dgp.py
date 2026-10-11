@@ -68,10 +68,17 @@ def make_units(n_units: int = N_METROS, seed: int = 0) -> list[UnitParams]:
     return units
 
 
-def nearest_seasonal_peak(unit: UnitParams, near_period: int) -> int:
-    """Period closest to `near_period` where the unit's seasonal term peaks."""
+def nearest_seasonal_peak(unit: UnitParams, near_period: int, min_period: int = 1, max_period: int | None = None) -> int:
+    """Period closest to `near_period` where the unit's seasonal term peaks, constrained
+    to [min_period, max_period] so the result stays inside the panel's actual period range
+    (an out-of-range peak would leave zero post-period rows and break the regression).
+    """
+    lo = max(min_period, near_period - WEEKS_PER_YEAR // 2)
+    hi = near_period + WEEKS_PER_YEAR // 2
+    if max_period is not None:
+        hi = min(hi, max_period)
     best_t, best_val = near_period, -np.inf
-    for t in range(max(1, near_period - WEEKS_PER_YEAR // 2), near_period + WEEKS_PER_YEAR // 2):
+    for t in range(lo, hi):
         val = np.sin(2 * np.pi * t / WEEKS_PER_YEAR + unit.seasonal_phase)
         if val > best_val:
             best_val, best_t = val, t

@@ -59,7 +59,12 @@ def _unit_effect(
     """Returns (effect series over all periods, donor weights)."""
     target_series = wide[target].to_numpy()
     donor_matrix = wide[donors].to_numpy()
-    w = _fit_weights(donor_matrix[pre_mask], target_series[pre_mask])
+    # scale by the target's own pre-period mean before solving: the optimal weights are
+    # scale-invariant, but the solver's numerical conditioning isn't — donor units can sit
+    # at a very different revenue scale than the target, which otherwise occasionally makes
+    # CLARABEL (and even the SCS fallback) fail to converge.
+    scale = target_series[pre_mask].mean() or 1.0
+    w = _fit_weights(donor_matrix[pre_mask] / scale, target_series[pre_mask] / scale)
     synthetic = donor_matrix @ w
     effect = target_series - synthetic
     return effect, w
