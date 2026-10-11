@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "decision-proof-app",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "--project",
+        ".",
+        "streamlit",
+        "run",
+        "src/decision_proof/app/Home.py",
+        "--server.port",
+        "8765",
+        "--server.headless",
+        "true"
+      ],
+      "port": 8765
+    }
+  ]
+}

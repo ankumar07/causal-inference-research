@@ -13,6 +13,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 
+def _usd(x: float) -> str:
+    """Dollar-format for markdown: a backslash-escaped $, since a bare '$...$' pair
+    (e.g. two dollar amounts in the same line) renders as LaTeX math in Streamlit's
+    markdown, not literal text."""
+    return f"\\${x:,.0f}"
+
+
 SCENARIO_NOTES = {
     "S1": "Price +6%, 60 weeks of history. The clean case.",
     "S2": "Same decision, 12 weeks of history. Short-history degradation.",
@@ -88,8 +95,8 @@ def write_report(raw: pd.DataFrame, out_path: str, n: int, elapsed_seconds: floa
     for _, row in summary.iterrows():
         lines.append(
             f"| {row['scenario']} | {row['method']} | {row['n']:.0f} | "
-            f"${row['true_cum_effect']:,.0f} | ${row['bias']:,.0f} | ${row['rmse']:,.0f} | "
-            f"{row['coverage_90']:.0%} | ${row['avg_interval_width']:,.0f} | {row['significant_rate']:.0%} |"
+            f"{_usd(row['true_cum_effect'])} | {_usd(row['bias'])} | {_usd(row['rmse'])} | "
+            f"{row['coverage_90']:.0%} | {_usd(row['avg_interval_width'])} | {row['significant_rate']:.0%} |"
         )
 
     lines += [
@@ -103,12 +110,12 @@ def write_report(raw: pd.DataFrame, out_path: str, n: int, elapsed_seconds: floa
             if scenario == "S3":
                 lines.append(
                     f"- {row['method']}: false-positive rate {row['significant_rate']:.0%} "
-                    f"(found a 'significant' effect when the true effect is $0)"
+                    f"(found a 'significant' effect when the true effect is {_usd(0)})"
                 )
             else:
                 lines.append(
                     f"- {row['method']}: {row['coverage_90']:.0%} coverage "
-                    f"(target 90%), bias ${row['bias']:,.0f}, power (detected as significant) {row['significant_rate']:.0%}"
+                    f"(target 90%), bias {_usd(row['bias'])}, power (detected as significant) {row['significant_rate']:.0%}"
                 )
         lines.append("")
 
