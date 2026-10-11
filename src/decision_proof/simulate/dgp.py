@@ -48,6 +48,7 @@ class UnitParams:
 
 def make_units(n_units: int = N_METROS, seed: int = 0) -> list[UnitParams]:
     rng = np.random.default_rng(seed)
+    shared_trend = rng.normal(0.0008, 0.0002)  # one draw, shared by every unit (per the M1 spec)
     units = []
     for i in range(n_units):
         units.append(
@@ -55,7 +56,7 @@ def make_units(n_units: int = N_METROS, seed: int = 0) -> list[UnitParams]:
                 unit_id=metro_id(i),
                 baseline_transactions=rng.uniform(4_000, 12_000),
                 avg_ticket=rng.uniform(5.5, 7.5),
-                trend_weekly=rng.normal(0.0008, 0.0003),
+                trend_weekly=shared_trend,
                 seasonal_amplitude=rng.uniform(0.05, 0.12),
                 seasonal_phase=rng.uniform(0, 2 * np.pi),
                 ar1_rho=rng.uniform(0.3, 0.6),

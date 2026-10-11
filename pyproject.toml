@@ -16,6 +16,7 @@ dependencies = [
     "streamlit",
     "plotly",
     "anthropic",
+    "wildboottest>=0.3.2",
 ]
 
 [dependency-groups]
