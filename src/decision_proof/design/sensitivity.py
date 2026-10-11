@@ -105,3 +105,25 @@ def fit_price_sensitivity(
         n_excluded_not_proven=n_excluded,
         points=all_points,
     )
+
+
+def fit_price_sensitivity_from_rows(rows: list[dict], alpha: float = 0.10) -> SensitivityResult:
+    """Same as fit_price_sensitivity, but for plain dict rows (e.g. from a cached
+    app-layer query) instead of full EffectEstimate/RefutationReport objects — the
+    fit only ever needed price_change_pct, pct_effect, pct_lo, pct_hi, verdict, and
+    decision_id, so callers that already have exactly those fields shouldn't have
+    to reconstruct pydantic objects just to call this.
+    """
+
+    class _Est:
+        def __init__(self, row: dict):
+            self.pct_effect = row["pct_effect"]
+            self.pct_lo = row["pct_lo"]
+            self.pct_hi = row["pct_hi"]
+
+    class _Report:
+        def __init__(self, row: dict):
+            self.verdict = row["verdict"]
+
+    experiments = [(r["price_change_pct"], _Est(r), _Report(r), r["decision_id"]) for r in rows]
+    return fit_price_sensitivity(experiments, alpha=alpha)
