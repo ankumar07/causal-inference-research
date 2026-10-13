@@ -1,6 +1,6 @@
 # Decision Proof: conventions
 
-README.md is the spec; docs/BUILD_PLAN.md is the plan.
+README.md is the spec.
 
 - Python 3.11, type hints everywhere, pydantic contracts in `contracts.py`.
 - Every estimator exposes `fit(panel, decision) -> EffectEstimate`.

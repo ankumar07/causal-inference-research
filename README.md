@@ -204,7 +204,7 @@ decision-proof/
 │   ├── agent/         tools.py, memo.py, grounding.py
 │   └── app/           Home.py, common.py, quarterly_common.py, methods_common.py, pages/
 ├── tests/             one file per module above (18 files)
-└── docs/              METHODS.md, LAB_REPORT.md, BUILD_PLAN.md
+└── docs/              METHODS.md, LAB_REPORT.md
 ```
 
 ## Quickstart
@@ -215,5 +215,3 @@ uv run python -m decision_proof.calibrate.harness --n 200   # writes docs/LAB_RE
 export ANTHROPIC_API_KEY=...  ANTHROPIC_MODEL=...            # optional, for the Claude memo
 uv run streamlit run src/decision_proof/app/Home.py
 ```
-
-`docs/BUILD_PLAN.md` has the original internal build plan (time-boxed blocks, scope tiers, demo script) this was built against.
